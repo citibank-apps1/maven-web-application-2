@@ -1,6 +1,8 @@
 
 node{
-    
+
+try{
+
 echo "the job name is: ${env.JOB_NAME}"
 echo "the build number is: ${env.BUILD_NUMBER}"
 echo "the node name is : ${env.NODE_NAME}"
@@ -33,5 +35,42 @@ sshagent(['61a93d4f-6943-45c5-b47d-b061c1dbafb3']){
   sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@54.160.138.70:/opt/apache-tomcat-9.0.68/webapps/"
 }
 }
+}//try closing
+catch (e){
+currentBuild.result = "FAILURE "
+} 
+finally{
+sendSlackNotifications(currentBuild.result)
+}
+
 
 }//node close
+
+
+//slack notification function
+
+def sendSlackNotifications(String buildStatus = 'STARTED') {
+  // build status of null means successful
+  buildStatus =  buildStatus ?: 'SUCCESS'
+
+  // Default values
+  def colorName = 'RED'
+  def colorCode = '#FF0000'
+  def subject = "${buildStatus}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+  def summary = "${subject} (${env.BUILD_URL})"
+
+  // Override default values based on build status
+  if (buildStatus == 'STARTED') {
+    colorName = 'YELLOW'
+    colorCode = '#FFFF00'
+  } else if (buildStatus == 'SUCCESS') {
+    colorName = 'GREEN'
+    colorCode = '#00FF00'
+  } else {
+    colorName  = 'RED'
+    colorCode = '#FF0000'
+  }
+
+  // Send notifications
+  slackSend (color: colorCode, message: summary)
+}
