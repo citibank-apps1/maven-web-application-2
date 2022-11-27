@@ -1,0 +1,37 @@
+
+node{
+    
+echo "the job name is: ${env.JOB_NAME}"
+echo "the build number is: ${env.BUILD_NUMBER}"
+echo "the node name is : ${env.NODE_NAME}"
+
+def mavenHome = tool name: 'Maven 3.8.5'
+//checkoutcode
+stage('CheckoutCode'){
+git branch: 'development', credentialsId: '9f85e2e6-358e-4639-bd8e-81e93f842438', url: 'https://github.com/citibank-apps1/maven-web-application-2.git'
+}//checkoutcode close
+
+//build
+stage('build'){
+sh "${mavenHome}/bin/mvn clean package"
+}//build close
+
+//sonarqubereports
+stage('Excutesonarreport'){
+sh "${mavenHome}/bin/mvn sonar:sonar"
+}
+
+//upload artifact into nexus
+stage('UploAdartifactIntoNexus'){
+sh "${mavenHome}/bin/mvn deploy"
+}
+
+
+//deploystage
+stage('deploystage'){
+sshagent(['61a93d4f-6943-45c5-b47d-b061c1dbafb3']){
+  sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@54.160.138.70:/opt/apache-tomcat-9.0.68/webapps/"
+}
+}
+
+}//node close
